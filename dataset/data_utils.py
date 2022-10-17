@@ -5,3 +5,17 @@ import jittor as jt
 
 # Const value
 NERF_SCALE = 0.33
+
+def read_image_imageio(image_file):
+    img = imageio.imread(image_file)
+    img = np.asarray(img).astype(np.float32)
+    if len(img.shape) == 2:
+        img = img[:,:,np.newaxis]
+    img /= 255.
+    return img
+
+def read_image(file):
+    '''
+    Will support the '.bin' image
+    '''
+    return read_image_imageio(file)
