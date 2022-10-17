@@ -1,3 +1,3 @@
 # Jittor-NeRF-Framework
 
-Implement NeRF Pipeline in Jittor.
+Implement `NeRF` Pipeline in Jittor.
