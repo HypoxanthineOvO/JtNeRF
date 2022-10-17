@@ -32,10 +32,60 @@ class NeRFDataset():
         assert mode in modes 
         self.mode = mode 
         
+        # Iterator parameters
+        self.idx = 0
+        
     def __next__(self):
         '''
         The NeRF-Dataset a iterator
         '''
+        
+    def load_data(self,root_dir = None):
+        '''
+        Load data from file
+        '''
+        if root_dir == None:
+            root_dir = self.root_dir
+        
+        jsonfile = []
+        for root,dirs,files in os.walk(root_dir):
+            '''
+            root: 当前文件夹的绝对路径
+            dirs: 当前文件夹下的子文件夹路径(一层)
+            files: 当前文件夹下所有文件的名称
+            '''
+            # Get .json path
+            json_paths = []
+            for file in files:
+                if os.path.splitext(file)[1] == ".json":
+                    if(self.mode in os.path.splitext(file)[0]):
+                        json_paths.append(os.path.join(root,file))
+            
+            # Get frames
+            json_data = None        
+            for json_path in json_paths:
+                with open(json_path,"r") as f:
+                    data = json.load(f)
+                if json_data is None:
+                    json_data = data
+                else:
+                    '''
+                    There only cone_angle and frame parameters of data.
+                    The 'frames' means all the data
+                    '''
+                    json_data['frames'] += data['frames']                   
+            
+            frames = json_data['frames']
+            for frame in tqdm(frames):
+                img_path = os.path.join(self.root_dir,frame['file_path'])
+                if not os.path.exists(img_path):
+                    img_path = img_path + ".png"
+                    if not os.path.exists(img_path):
+                        print("俺的图图呢?")
+                        continue
+                img = read_image(img_path)
+                    
+                    
         
         
         
