@@ -15,10 +15,13 @@ class NeRFDataset():
                  batch_size,
                  mode = "train",
                  H = 0, W = 0,
-                 correct_pose = [1,-1,-1]):
+                 correct_pose = [1,-1,-1],
+                 scale = None,offset = None):
         self.root_dir = root_dir
         self.batch_size = batch_size
         
+        self.H = H
+        self.W = W
         self.imgsize = [H,W]
         self.correct_pose = correct_pose
         
@@ -26,6 +29,17 @@ class NeRFDataset():
         self.img_count = 0
         self.image_data = [] # Images of the dataset
         self.focal_lengths = [] # focal length of each images
+        self.transform_matrixs = [] # Transform matrixs
+        
+        # To correct the scale of NeRF and NGP
+        if scale is None:
+            self.scale = NERF_SCALE
+        else:
+            self.scale = scale 
+        if offset is None:
+            self.offset = [0.5,0.5,0.5]
+        else:
+            self.offset = offset
         
         # Modes
         modes = ["train","test"]
@@ -34,6 +48,8 @@ class NeRFDataset():
         
         # Iterator parameters
         self.idx = 0
+        
+        
         
     def __next__(self):
         '''
@@ -77,6 +93,9 @@ class NeRFDataset():
             
             frames = json_data['frames']
             for frame in tqdm(frames):
+                '''
+                Load the images
+                '''
                 img_path = os.path.join(self.root_dir,frame['file_path'])
                 if not os.path.exists(img_path):
                     img_path = img_path + ".png"
@@ -84,6 +103,40 @@ class NeRFDataset():
                         print("俺的图图呢?")
                         continue
                 img = read_image(img_path)
+                if self.H == 0 or self.W == 0:
+                    self.H = int(img.shape[0])
+                    self.W = int(img.shape[1])
+                self.image_data.append(img)
+                
+                self.img_count += 1
+                matrix = np.array(frame['transform_matrix'],np.float32)[:-1,:] # Remove the last column
+                self.transform_matrixs.append(
+                    self.matrix_NeRF2NGP(matrix,self.scale,self.offset)
+                )
+    # 原JNeRF P116
+                
+    
+    def matrix_NeRF2NGP(self,matrix,scale,offset):
+        '''
+        Copy from JNeRF
+        '''
+        matrix[:, 0] *= self.correct_pose[0]
+        matrix[:, 1] *= self.correct_pose[1]
+        matrix[:, 2] *= self.correct_pose[2]
+        matrix[:, 3] = matrix[:, 3] * scale + offset
+        matrix=matrix[[1,2,0]]
+        return matrix
+        
+    def matrix_NGP2NeRF(self, matrix, scale, offset):
+        '''
+        Copy from JNeRF
+        '''
+        matrix=matrix[[2,0,1]]
+        matrix[:, 0] *= self.correct_pose[0]
+        matrix[:, 1] *= self.correct_pose[1]
+        matrix[:, 2] *= self.correct_pose[2]  
+        matrix[:, 3] = (matrix[:, 3] - offset) / scale
+        return matrix
                     
                     
         
