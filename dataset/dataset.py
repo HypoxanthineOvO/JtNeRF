@@ -22,7 +22,7 @@ class NeRFDataset():
         
         self.H = H
         self.W = W
-        self.imgsize = [H,W]
+        self.resolution = [H,W]
         self.correct_pose = correct_pose
         
         # Datas
@@ -113,7 +113,11 @@ class NeRFDataset():
                 self.transform_matrixs.append(
                     self.matrix_NeRF2NGP(matrix,self.scale,self.offset)
                 )
-    # 原JNeRF P116
+        self.resolution = [self.H,self.W]
+        self.resolution_GPU = jt.array(self.resolution)
+        
+        metadata = np.empty([11],np.float32)
+        metadata[0] = json_data.get('k1',0)
                 
     
     def matrix_NeRF2NGP(self,matrix,scale,offset):
