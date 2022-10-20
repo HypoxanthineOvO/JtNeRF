@@ -25,9 +25,13 @@ class NeRFDataset():
         self.resolution = [H,W]
         self.correct_pose = correct_pose
         
+        # aavv
+        self.aabb_scale = None
+        
         # Datas
         self.img_count = 0
         self.image_data = [] # Images of the dataset
+        self.metadata = []
         self.focal_lengths = [] # focal length of each images
         self.transform_matrixs = [] # Transform matrixs
         
@@ -48,6 +52,8 @@ class NeRFDataset():
         
         # Iterator parameters
         self.idx = 0
+        
+        
         
         
         
@@ -117,7 +123,69 @@ class NeRFDataset():
         self.resolution_GPU = jt.array(self.resolution)
         
         metadata = np.empty([11],np.float32)
+        # Dinctionary.get(key,default): Return the value of key.
         metadata[0] = json_data.get('k1',0)
+        metadata[1] = json_data.get('k1',0)
+        metadata[2]= json_data.get('p1',0)
+        metadata[3]=json_data.get('p2',0)
+        metadata[4]=json_data.get('cx',self.W/2)/self.W
+        metadata[5]=json_data.get('cy',self.H/2)/self.H
+        
+        # Read the parameter of focal length.
+        def read_focal_length(resolution,axis):
+            if 'fl_'+axis in json_data:
+                return json_data['fl_'+axis]
+            elif 'camera_angle_'+axis in json_data:
+                return fovangle_to_focallength(resolution,json_data['camera_angle_'+axis]*180/pi)
+            else:
+                return 0
+            
+        # Resolution means the size of image.
+        x_fl = read_focal_length(self.resolution[0],'x')
+        y_fl = read_focal_length(self.resolution[1],'y')
+        focal_length = []
+        if x_fl == 0 and y_fl == 0:
+            raise RuntimeError("Fuck You!!! Where are the fov???")
+        elif x_fl != 0:
+            focal_length = [x_fl,y_fl]
+            if y_fl != 0:
+                focal_length[1] = y_fl
+        else:
+            focal_length = [y_fl,y_fl]
+            
+        self.focal_lengths.append(focal_length)
+        metadata[6] = focal_length[0]
+        metadata[7] = focal_length[1]
+        
+        light_direction = np.array([0,0,0])
+        metadata[8:] = light_direction
+        
+        self.metadata = np.expand_dims(metadata,0).repeat(self.img_count,axis = 0)
+        if self.aabb_scale is None:
+            self.aabb_scale = json_data.get('aabb_scale',1)
+        aabb_range = (0.5,0.5)
+        self.aabb_range = (aabb_range[0]-self.aabb_scale/2,aabb_range[1]+self.aabb_scale/2)
+        
+        self.H = int(self.H)
+        self.W = int(self.W)
+        
+        self.image_data = jt.array(self.image_data)
+        self.transform_matrixs = jt.array(self.transform_matrixs)
+        self.focal_lengths = jt.array(self.focal_lengths).repeat(self.img_count,1)
+        
+        # Transpose to adapt Eigen::Matrix memory
+        self.transform_matrixs = self.transform_matrixs.transpose(0,2,1)
+        self.metadata = jt.array(self.metadata)
+        
+        self.shuffle_index = jt.randperm(self.H*self.W*self.img_count).detach()
+        jt.gc()
+        
+        
+        # 直接跑的话肯定会出问题，因为不是复制粘贴的内容。
+        # 后面看情况，如果限定了训练集，可以尝试自己重新写一个 dataset 类。
+        # 暂时就先到这里吧
+        
+        
                 
     
     def matrix_NeRF2NGP(self,matrix,scale,offset):

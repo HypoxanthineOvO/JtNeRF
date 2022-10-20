@@ -19,3 +19,6 @@ def read_image(file):
     Will support the '.bin' image
     '''
     return read_image_imageio(file)
+
+def fovangle_to_focallength(resolution:int,degrees:float):
+    return 0.5*resolution/tan(0.5*degrees*(pi/180))
