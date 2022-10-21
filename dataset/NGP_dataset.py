@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from .data_utils import *
 
-class NeRFDataset():
+class NGPDataset():
     def __init__(self,
                  root_dir,
                  batch_size,
