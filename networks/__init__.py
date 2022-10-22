@@ -1,1 +1,1 @@
-from .nerf_net import py
+from .nerf_net import *

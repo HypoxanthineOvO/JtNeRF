@@ -1,6 +1,5 @@
 import jittor as jt
 import numpy as np
-import os
 
 class NeRFDataset:
     def __init__(self,
