@@ -28,4 +28,6 @@ class NeRF_Render:
         
         pts = self.rays_o[...,np.newaxis,:]+ self.rays_d[...,np.newaxis,:]*z_values[...,:,np.newaxis]
         pts_flat = jt.reshape(pts,[-1,3])
+        pts_flat = self.enc(pts_flat)
+        raw = self.net(pts_flat)
         
