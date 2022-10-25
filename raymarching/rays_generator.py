@@ -12,6 +12,9 @@ class NeRF_RayGen:
             jt.arange(0,self.H,dtype= jt.float32),
             )
         dirs = jt.stack([(i-self.W/2)/self.focallength,-(j-self.H/2)/self.focallength,-jt.ones_like(i)],dim = -1)
-        rays_d = jt.sum(dirs[...,np.newaxis,:] * c2w[...,:3,:3],dim=-1)
-        rays_o = c2w[...,:3,-1].expand(rays_d.shape)
+        
+        rays_d = jt.sum(jt.stack([dirs[...,np.newaxis,:]*c2w[i,:3,:3] for i in range(c2w.shape[0])],dim = 0),dim = -1)
+        #rays_d = jt.sum(dirs[...,np.newaxis,:] * c2w[...,np.newaxis,np.newaxis,:3,:3],dim=-1)
+
+        rays_o = jt.stack([c2w[i,:3,-1].expand(rays_d.shape[1:]) for i in range(c2w.shape[0])],dim = -0)
         return rays_o,rays_d

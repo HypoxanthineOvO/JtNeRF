@@ -28,7 +28,7 @@ class NeRFDataset:
             self.load_npz_data()
             
         self.images = jt.array(self.images)
-        self.poses = jt.array(self.images)
+        self.poses = jt.array(self.poses)
         self.focal_length = jt.array(self.focal_length)
         
             
@@ -68,6 +68,9 @@ class NeRFDataset:
             
     def reset(self):
         self.idx = 0
+        
+    def get_para(self):
+        return self.H,self.W,self.focal_length
         
         
         
