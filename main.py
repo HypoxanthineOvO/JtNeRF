@@ -9,7 +9,7 @@ if jt.has_cuda:
 parser = argparse.ArgumentParser(description= "Jittor NeRF Framework!!")
 parser.add_argument("--test",action="store_true")
 
-parser.add_argument("--iter",type=int,default= 10000)
+parser.add_argument("--iter",type=int,default= 100)
 
 parser.add_argument("--data_type",default='npz')
 parser.add_argument("--dir",default='./data/tiny_nerf_data.npz')
@@ -33,5 +33,5 @@ if(args.test):
     print("But 我还没写, tnnd, 开摆")
     
 else:
-    trainer = Trainer('Trial',data,encoder)
+    trainer = Trainer('Trial',data,encoder,iters = args.iter)
     trainer.train()

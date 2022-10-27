@@ -43,9 +43,8 @@ class NeRF_Render:
         alpha = 1.0-jt.exp(-sig_a * dists)
         # Sir, this way!
         weights = alpha * self.cumprod_exclusive(1.0-alpha+1e-10)
-        print("FOO111")
         rgb_map = jt.sum((weights[...,None]* rgb ),dim = -2)
-        print("FOO111")
+
         
         rgb_maps = jt.split(rgb_map,int(rgb_map.shape[0]/self.batchsize))
         

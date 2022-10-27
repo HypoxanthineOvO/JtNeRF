@@ -36,6 +36,7 @@ class Trainer():
         
         self.lr = lr
         self.N_iters = iters
+        self.batchsize = data['batch_size']
         
         # Dataloader
         self.dataloader = NeRFDataset(
@@ -87,16 +88,21 @@ class Trainer():
         idxs,imgs,poses = next(self.dataloader)
         rays_o,rays_d = self.rays_gen.get_rays(poses)
         rgbs = []
-        rays_o,rays_d = 
-        rgb = self.render.rendering(rays_o,rays_d)
+        rays_o,rays_d = np.split(rays_o,self.batchsize),np.split(rays_d,self.batchsize)
+        for i in range(len(rays_o)):
+            #ro,rd = jt.array(rays_o[i]),jt.array(rays_d[i])
+            ro,rd = rays_o[i],rays_d[i]
+            rgb = self.render.rendering(ro,rd)
+            
+            rgbs.append(rgb)
+
         loss = jt.mean(jt.sqr(rgb-imgs))
         self.optimizer.step(loss)
+        return loss
         
     def train(self):
         for i in tqdm.tqdm(range(self.N_iters)):
-
-            self.train_one_step()
-            if self.train_index % 1000 == 0:
-                print(self.train_index)
+            loss = self.train_one_step()
+            if i % 10 == 0:
+                print(loss)
             
-            self.train_index += 1
