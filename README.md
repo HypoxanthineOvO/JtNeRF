@@ -11,7 +11,11 @@ You need following package:
 - `opencv-python`: You can use `pip install opencv-python` to get this package.
 
 ### Run the codes
-Make sure that you have `tiny_nerf_data.npz` in your `data` folder.
+Firstly clone it:
+```powershell
+git clone https://github.com/HypoxanthineOvO/JtNeRF
+```
+> Make sure that you have `tiny_nerf_data.npz` in your `data` folder.
 Then, run:
 ```powershell
 python main.py
