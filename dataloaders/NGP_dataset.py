@@ -2,7 +2,7 @@ import random
 import jittor as jt
 from jittor.dataset import Dataset
 import numpy as np
-import os,json,imageio,cv2
+import os,json
 
 from math import pi,tan
 from tqdm import tqdm

@@ -45,9 +45,6 @@ class NeRFDataset:
         return indexs,imgs,poss
         
         
-        
-        
-        
     def load_npz_data(self):
         # Check the type of data
         data = np.load(self.root_dir)

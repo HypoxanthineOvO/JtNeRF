@@ -46,8 +46,8 @@ class NeRF_Render:
         rgb_map = jt.sum((weights[...,None]* rgb ),dim = -2)
 
         
-        rgb_maps = jt.split(rgb_map,int(rgb_map.shape[0]/self.batchsize))
+        #rgb_maps = jt.split(rgb_map,int(rgb_map.shape[0]/self.batchsize))
         
-        
-        return jt.stack(rgb_maps)
+        #print(rgb_maps[0].shape)
+        return rgb_map
         

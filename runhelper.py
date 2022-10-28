@@ -4,12 +4,15 @@ from jittor import nn
 import numpy as np
 import pandas as pd
 import tqdm 
+from PIL import Image
+import cv2 as cv
 
-from dataset import NeRFDataset
+from dataloaders import NeRFDataset
 from raymarching import NeRF_RayGen
-from encoder import PositionalEncoder
+from encoders import PositionalEncoder
 from networks import NeRF_Net
 from renders import NeRF_Render
+from utils import Losser
 
 
 class Trainer():
@@ -37,6 +40,7 @@ class Trainer():
         self.lr = lr
         self.N_iters = iters
         self.batchsize = data['batch_size']
+        self.show_iter = 100
         
         # Dataloader
         self.dataloader = NeRFDataset(
@@ -77,32 +81,48 @@ class Trainer():
         else:
             print("还没写")
             self.optimizer = nn.Adam(self.model.parameters(),self.lr)
-        
-        # Training parameters
-        self.train_index = 0
-        
+
+        # Compute loss
+        self.losser = Losser()
+
     def train_one_step(self):
         '''
         A train loop
         '''
         idxs,imgs,poses = next(self.dataloader)
-        rays_o,rays_d = self.rays_gen.get_rays(poses)
-        rgbs = []
-        rays_o,rays_d = np.split(rays_o,self.batchsize),np.split(rays_d,self.batchsize)
-        for i in range(len(rays_o)):
-            #ro,rd = jt.array(rays_o[i]),jt.array(rays_d[i])
-            ro,rd = rays_o[i],rays_d[i]
-            rgb = self.render.rendering(ro,rd)
-            
-            rgbs.append(rgb)
 
-        loss = jt.mean(jt.sqr(rgb-imgs))
+        rays_o,rays_d = self.rays_gen.get_rays(poses)
+        """rays_o,rays_d = np.split(rays_o,self.batchsize),np.split(rays_d,self.batchsize)
+        rgbs = np.array([self.render.rendering(rays_o[i],rays_d[i]).numpy() for i in range(len(rays_o))])
+        rgbs = np.concatenate(rgbs,0)"""
+        rays_o,rays_d = jt.split(rays_o,1),jt.split(rays_d,1)
+        rgbs = jt.concat([self.render.rendering(rays_o[i],rays_d[i]) for i in range(self.batchsize)])
+        loss = jt.mean(jt.sqr(rgbs-imgs))
         self.optimizer.step(loss)
         return loss
-        
+    
+    def val(self):
+        idxs,imgs,poses = next(self.dataloader)
+        rays_o,rays_d = self.rays_gen.get_rays(poses)
+        rays_o,rays_d = jt.split(rays_o,1),jt.split(rays_d,1)
+        rgbs = jt.concat([self.render.rendering(rays_o[i],rays_d[i]) for i in range(self.batchsize)])
+        return rgbs,imgs
+
     def train(self):
         for i in tqdm.tqdm(range(self.N_iters)):
             loss = self.train_one_step()
-            if i % 10 == 0:
-                print(loss)
+            if i % self.show_iter == 0:
+                print("")
+                print(f"Loss = {loss}, PSNR = {self.losser.mse2psnr(loss)}")
+            jt.sync_all()
+            jt.gc()
+        
+        # Finally show the answer
+        rgbs,imgs = self.val()
+        psnr = np.mean([self.losser.psnr(rgbs[j],imgs[j]) for j in range(self.batchsize)])
+        print(f"Finally, PSNR = {psnr}")
+        for i,rgb in enumerate(rgbs):
+            cv.imwrite(f"./out/test/gt{i}.jpg",imgs[i].numpy()*255)
+            cv.imwrite(f"./out/test/op{i}.jpg",rgb.numpy()*255)
+            
             
