@@ -7,17 +7,19 @@ if jt.has_cuda:
     jt.flags.use_cuda = 1
 
 # Status
-parser = argparse.ArgumentParser(description= "Jittor NeRF Framework!!")
+parser = argparse.ArgumentParser(description= "Jittor-NeRF-Framework")
 parser.add_argument("--test",action="store_true")
-parser.add_argument("--output",default="./output/test")
+parser.add_argument("--output",default="./out/test/")
 
 # Basic parameters
+parser.add_argument("--lr",type = float,default= 1e-5)
 parser.add_argument("--iter",type=int,default= 1000)
 
 # About load data
+parser.add_argument("--model",default="./out/test/test_model.pkl") # Jittor only support pkl
 parser.add_argument("--data_type",default='npz')
 parser.add_argument("--dir",default='./data/tiny_nerf_data.npz')
-parser.add_argument("--batchsize",type= int,default = 10)
+parser.add_argument("--batchsize",type= int,default = 2)
 
 # About Encoding
 parser.add_argument("--enc",default= "pos")
@@ -29,14 +31,19 @@ args = parser.parse_args()
 
 print(args)
 
-data = {'type':args.data_type,'root_dir':args.dir,'batch_size':args.batchsize}
+data = {'type':args.data_type,'root_dir':args.dir,'batch_size':args.batchsize,'out':args.output}
 encoder = {'type':args.enc,'para':args.encpara}
+train_parameters = {'lr':args.lr,"iters":args.iter}
 
 
 if(args.test):
     print("Test!!")
-    print("But 我还没写, tnnd, 开摆")
+    tester = Trainer("Test",data,encoder,train_parameters,model = args.model)
     
 else:
-    trainer = Trainer('Trial',data,encoder,iters = args.iter)
+    if args.model != "None":
+        trainer = Trainer('Trial',data,encoder,train_parameters,model=args.model)
+    else:
+        print(train_parameters)
+        trainer = Trainer('Trial',data,encoder,train_parameters)
     trainer.train()

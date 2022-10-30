@@ -1,11 +1,12 @@
 from pickletools import optimize
 import jittor as jt
-from jittor import nn
+from jittor import nn, save
 import numpy as np
 import pandas as pd
 import tqdm 
 from PIL import Image
 import cv2 as cv
+import os
 
 from dataloaders import NeRFDataset
 from raymarching import NeRF_RayGen
@@ -20,11 +21,10 @@ class Trainer():
                  name,
                  data,
                  encoder,
-                 lr = 1e-5,
-                 iters = 1000,
+                 para,
                  model = None,
-                 lossfn = None,
                  optim = None,
+                 save_checkpoint = True,
                  ):
         '''
         name: string
@@ -37,11 +37,12 @@ class Trainer():
         '''
         self.name = name
         
-        self.lr = lr
-        self.N_iters = iters
+        self.lr = para['lr']
+        self.N_iters = para["iters"]
         self.batchsize = data['batch_size']
-        self.show_iter = 100
-        
+        self.show_iter = self.N_iters/10
+        self.save_checkpoint = save_checkpoint
+        self.out = data['out']
         # Dataloader
         self.dataloader = NeRFDataset(
             data_type = data['type'],
@@ -61,12 +62,12 @@ class Trainer():
             self.encoder = PositionalEncoder()
             
         # Network
-        if model is None:
-            self.model = NeRF_Net()
+        
+        if os.path.exists(model):
+            self.model = jt.load(model)
+            print(f"\nLOAD model from {model}")
         else:
-            print("还没写")
             self.model = NeRF_Net()
-            
         # Render
         '''Need to change'''
         self.render = NeRF_Render(self.model,
@@ -84,6 +85,8 @@ class Trainer():
 
         # Compute loss
         self.losser = Losser()
+        
+        
 
     def train_one_step(self):
         '''
@@ -113,16 +116,27 @@ class Trainer():
             loss = self.train_one_step()
             if i % self.show_iter == 0:
                 print("")
-                print(f"Loss = {loss}, PSNR = {self.losser.mse2psnr(loss)}")
-            jt.sync_all()
-            jt.gc()
+                print(f"Loss = {round(float(loss.numpy()),4)}, PSNR = {round(float(self.losser.mse2psnr(loss)),2)}")
+
+        # Save the model
+        if self.save_checkpoint:
+            jt.save(self.model,self.out+'test_model.pkl')
         
         # Finally show the answer
         rgbs,imgs = self.val()
         psnr = np.mean([self.losser.psnr(rgbs[j],imgs[j]) for j in range(self.batchsize)])
         print(f"Finally, PSNR = {psnr}")
         for i,rgb in enumerate(rgbs):
-            cv.imwrite(f"./out/test/gt{i}.jpg",imgs[i].numpy()*255)
-            cv.imwrite(f"./out/test/op{i}.jpg",rgb.numpy()*255)
+            cv.imwrite(self.out+f"gt{i}.jpg",imgs[i].numpy()*255)
+            cv.imwrite(self.out+f"op{i}.jpg",rgb.numpy()*255)
             
-            
+    def test(self):
+        
+        psnrs = []
+        for i in tqdm.tqdm(range(self.dataloader.image_cnt/self.batchsize)):
+            rgbs,imgs = self.val()
+            psnr = np.mean([self.losser.psnr(rgbs[j],imgs[j]) for j in range(self.batchsize)])
+            psnrs.append(psnr)
+        finalpsnr = np.mean(np.array(psnrs))
+        print(f"PSNR = {finalpsnr}")
+        
